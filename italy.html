@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>איטליה - מדריך וניווט אישי</title>
+    <meta name="theme-color" content="#0284c7">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans pb-24">
+
+    <!-- Header -->
+    <header class="bg-sky-700 text-white sticky top-0 z-30 shadow-md px-4 py-3">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">איטליה בדרכים 🇮🇹</h1>
+                <p id="location-status" class="text-xs text-sky-200 mt-0.5">מיקום לא זוהה</p>
+            </div>
+            <button id="btn-gps" onclick="getUserLocation()" class="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-xs font-semibold py-2 px-3 rounded-full shadow transition-all border border-sky-400/40 active:scale-95">
+                <i data-lucide="locate" class="w-4 h-4"></i>
+                <span>עדכן מיקום</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto px-4 mt-3">
+
+        <!-- כפתור סינון "קרוב אליי" ומודד מרחק -->
+        <div class="flex items-center justify-between gap-2 mb-3">
+            <button id="btn-near-me" onclick="toggleNearMe()" class="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl font-medium text-sm border border-slate-300 bg-white text-slate-700 shadow-sm active:bg-slate-50 transition-colors">
+                <i data-lucide="compass" class="w-4 h-4 text-sky-600"></i>
+                <span id="near-me-text">מיין לפי הקרוב ביותר</span>
+            </button>
+            <button onclick="openModal()" class="flex items-center justify-center p-2 rounded-xl bg-sky-700 text-white shadow-sm hover:bg-sky-800 active:scale-95 transition-all" title="הוסף מקום חדש">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- קטגוריות סינון מהיר -->
+        <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-2 mb-2" id="category-bar">
+            <button onclick="filterCategory('all')" class="cat-pill bg-sky-700 text-white px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">הכל</button>
+            <button onclick="filterCategory('drive')" class="cat-pill bg-white text-slate-600 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">מסלולי נסיעה 🚗</button>
+            <button onclick="filterCategory('hike')" class="cat-pill bg-white text-slate-600 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">הליכות קצרות 🥾</button>
+            <button onclick="filterCategory('food')" class="cat-pill bg-white text-slate-600 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">מסעדות ואוכל 🍝</button>
+            <button onclick="filterCategory('view')" class="cat-pill bg-white text-slate-600 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">תצפיות ואטרקציות 📸</button>
+            <button onclick="filterCategory('stay')" class="cat-pill bg-white text-slate-600 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">צימרים ולינה 🏡</button>
+        </div>
+
+        <!-- חיפוש טקסט חופשי -->
+        <div class="relative mb-4">
+            <input type="text" id="search-input" oninput="renderPlaces()" placeholder="חפש לפי שם, עיר או אזור..." class="w-full bg-white border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3 top-3.5"></i>
+        </div>
+
+        <!-- רשימת המקומות -->
+        <div id="places-list" class="space-y-3">
+            <!-- כרטיסיות נטענות כאן דינמית -->
+        </div>
+
+    </main>
+
+    <!-- מודאל הוספת מקום חדש -->
+    <div id="modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b pb-2">
+                <h3 class="font-bold text-base text-slate-800">הוספת נקודת יעד חדשה</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="add-form" onsubmit="handleFormSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium mb-1 text-slate-700">שם המקום</label>
+                    <input type="text" id="form-name" required placeholder="למשל: תצפית מעבר גרדנה" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block font-medium mb-1 text-slate-700">קטגוריה</label>
+                    <select id="form-category" class="w-full border rounded-lg p-2.5 text-sm bg-white">
+                        <option value="drive">מסלול נסיעה נופי</option>
+                        <option value="hike">מסלול הליכה קצר</option>
+                        <option value="food">מסעדה / אוכל</option>
+                        <option value="view">תצפית / אטרקציה</option>
+                        <option value="stay">צימר / לינה</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1 text-slate-700">תיאור וטיפים</label>
+                    <textarea id="form-desc" rows="2" placeholder="חניה נוחה, נוף למצוקים..." class="w-full border rounded-lg p-2.5 text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700">קו רוחב (Latitude)</label>
+                        <input type="number" step="any" id="form-lat" required placeholder="46.549" class="w-full border rounded-lg p-2 text-sm" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block font-medium mb-1 text-slate-700">קו אורך (Longitude)</label>
+                        <input type="number" step="any" id="form-lng" required placeholder="11.809" class="w-full border rounded-lg p-2 text-sm" dir="ltr">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1 text-slate-700">שם לחיפוש בטריפ-אדוויזור (אופציונלי)</label>
+                    <input type="text" id="form-tripadvisor" placeholder="Gardena Pass Dolomites" class="w-full border rounded-lg p-2.5 text-sm">
+                </div>
+                <div class="pt-2 flex gap-2">
+                    <button type="submit" class="flex-1 bg-sky-700 text-white font-medium py-2.5 rounded-xl hover:bg-sky-800">שמור נקודה</button>
+                    <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 font-medium py-2.5 rounded-xl">ביטול</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // בסיס נתונים התחלתי - דוגמאות מייצגות לצפון איטליה (ניתן לערוך ולהוסיף חופשי)
+        const initialPlaces = [
+            {
+                id: 1,
+                name: "מעבר גרדנה (Passo Gardena)",
+                category: "drive",
+                desc: "אחד ממעברי ההרים המרהיבים ביותר בדולומיטים. כביש מפותל עם תצפית פנורמית פראית.",
+                lat: 46.5498,
+                lng: 11.8091,
+                tripAdvisorQuery: "Passo Gardena"
+            },
+            {
+                id: 2,
+                name: "אגם ברייס (Lago di Braies)",
+                category: "hike",
+                desc: "מסלול הליכה מעגלי וקל של כ-3.5 ק״מ סביב האגם הטורקיז המפורסם. הליכה מישורית ונוחה.",
+                lat: 46.6946,
+                lng: 12.0854,
+                tripAdvisorQuery: "Lago di Braies"
+            },
+            {
+                id: 3,
+                name: "ריביירה דל גארדה וסירמיונה (Sirmione)",
+                category: "view",
+                desc: "העיירה העתיקה בלשון היבשה של אגם גארדה, מבצר סקליג'רו ותצפיות על המים.",
+                lat: 45.4930,
+                lng: 10.6074,
+                tripAdvisorQuery: "Castello Scaligero Sirmione"
+            },
+            {
+                id: 4,
+                name: "אגריטוריזמו קורט באסו (Agriturismo Corte Bassa)",
+                category: "stay",
+                desc: "חווה חקלאית אותנטית מוקפת כרמים ומטעים, חוויית אירוח כפרי שקט ליד אגם גארדה.",
+                lat: 45.3850,
+                lng: 10.7100,
+                tripAdvisorQuery: "Agriturismo Lake Garda"
+            },
+            {
+                id: 5,
+                name: "מסעדת Ristorante Baita Checco",
+                category: "food",
+                desc: "בקתת הרים מסורתית ברכס צ'מפדי (Vigo di Fassa) - פולנטה מקומית, פטריות יער וקינוחים אלפיניים.",
+                lat: 46.4255,
+                lng: 11.6702,
+                tripAdvisorQuery: "Baita Checco Ciampedie"
+            },
+            {
+                id: 6,
+                name: "כביש סטלביו (Passo dello Stelvio)",
+                category: "drive",
+                desc: "כביש הנהיגה המיתולוגי באיטליה עם עשרות פניות פרסה (Hairpins) ונופי אלפים עוצרי נשימה.",
+                lat: 46.5294,
+                lng: 10.4532,
+                tripAdvisorQuery: "Passo dello Stelvio"
+            }
+        ];
+
+        let userCoords = null;
+        let selectedCategory = 'all';
+        let sortByDistance = false;
+        let places = JSON.parse(localStorage.getItem('italy_app_places')) || initialPlaces;
+
+        function savePlaces() {
+            localStorage.setItem('italy_app_places', JSON.stringify(places));
+        }
+
+        // חישוב מרחק אווירי (נוסחת Haversine) בק"מ
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLon = (lon2 - lon1) * (Math.PI / 180);
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return (R * c).toFixed(1);
+        }
+
+        // קבלת מיקום מהטלפון
+        function getUserLocation() {
+            const statusEl = document.getElementById('location-status');
+            if (!navigator.geolocation) {
+                statusEl.textContent = 'GPS אינו נתמך בדפדפן זה';
+                return;
+            }
+            statusEl.textContent = 'מאתר מיקום...';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    statusEl.textContent = `מיקום עודכן (${userCoords.lat.toFixed(3)}, ${userCoords.lng.toFixed(3)})`;
+                    renderPlaces();
+                },
+                (err) => {
+                    statusEl.textContent = 'שגיאת מיקום: ודא שה-GPS מופעל';
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        function toggleNearMe() {
+            if (!userCoords) {
+                getUserLocation();
+            }
+            sortByDistance = !sortByDistance;
+            const btn = document.getElementById('btn-near-me');
+            const txt = document.getElementById('near-me-text');
+            if (sortByDistance) {
+                btn.classList.add('bg-sky-50', 'border-sky-500', 'text-sky-700');
+                txt.textContent = 'מסודר לפי מרחק ממיקומך';
+            } else {
+                btn.classList.remove('bg-sky-50', 'border-sky-500', 'text-sky-700');
+                txt.textContent = 'מיין לפי הקרוב ביותר';
+            }
+            renderPlaces();
+        }
+
+        function filterCategory(cat) {
+            selectedCategory = cat;
+            document.querySelectorAll('.cat-pill').forEach(el => {
+                el.classList.remove('bg-sky-700', 'text-white');
+                el.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+            });
+            event.target.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+            event.target.classList.add('bg-sky-700', 'text-white');
+            renderPlaces();
+        }
+
+        function getCategoryLabel(cat) {
+            switch(cat) {
+                case 'drive': return { name: 'מסלול נסיעה', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+                case 'hike': return { name: 'מסלול הליכה', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                case 'food': return { name: 'אוכל ומסעדה', color: 'bg-orange-50 text-orange-700 border-orange-200' };
+                case 'view': return { name: 'תצפית / עניין', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
+                case 'stay': return { name: 'צימר / לינה', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+                default: return { name: 'יעד', color: 'bg-slate-50 text-slate-700 border-slate-200' };
+            }
+        }
+
+        function renderPlaces() {
+            const listEl = document.getElementById('places-list');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+
+            let filtered = places.filter(p => {
+                const matchCat = selectedCategory === 'all' || p.category === selectedCategory;
+                const matchSearch = p.name.toLowerCase().includes(searchVal) || p.desc.toLowerCase().includes(searchVal);
+                return matchCat && matchSearch;
+            });
+
+            if (userCoords) {
+                filtered.forEach(p => {
+                    p.dist = parseFloat(calculateDistance(userCoords.lat, userCoords.lng, p.lat, p.lng));
+                });
+                if (sortByDistance) {
+                    filtered.sort((a, b) => a.dist - b.dist);
+                }
+            }
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-12 text-slate-400">
+                        <i data-lucide="map-pin-off" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-sm">לא נמצאו תוצאות בחיפוש או בקטגוריה זו</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(p => {
+                const catMeta = getCategoryLabel(p.category);
+                const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+                const tripAdvisorUrl = `https://www.tripadvisor.com/Search?q=${encodeURIComponent(p.tripAdvisorQuery || p.name)}`;
+
+                return `
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <h2 class="font-bold text-base text-slate-800 leading-snug">${p.name}</h2>
+                            <span class="text-[11px] px-2.5 py-0.5 rounded-full border font-medium whitespace-nowrap ${catMeta.color}">
+                                ${catMeta.name}
+                            </span>
+                        </div>
+                        
+                        <p class="text-xs text-slate-600 mb-3 leading-relaxed">${p.desc}</p>
+
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                            <div class="flex items-center text-slate-500 font-medium">
+                                ${p.dist !== undefined ? `<i data-lucide="navigation" class="w-3.5 h-3.5 ml-1 text-sky-600"></i> כ-${p.dist} ק"מ ממך` : '<span class="text-slate-400">הפעל GPS למרחק</span>'}
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="${tripAdvisorUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1.5 rounded-lg font-medium transition-colors border border-emerald-200">
+                                    <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                                    <span>ביקורות</span>
+                                </a>
+                                <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 bg-sky-700 hover:bg-sky-800 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition-colors">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                                    <span>נווט</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function openModal() {
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('add-form').reset();
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const newPlace = {
+                id: Date.now(),
+                name: document.getElementById('form-name').value,
+                category: document.getElementById('form-category').value,
+                desc: document.getElementById('form-desc').value,
+                lat: parseFloat(document.getElementById('form-lat').value),
+                lng: parseFloat(document.getElementById('form-lng').value),
+                tripAdvisorQuery: document.getElementById('form-tripadvisor').value || document.getElementById('form-name').value
+            };
+
+            places.unshift(newPlace);
+            savePlaces();
+            closeModal();
+            renderPlaces();
+        }
+
+        // טעינה ראשונית
+        window.addEventListener('DOMContentLoaded', () => {
+            renderPlaces();
+            getUserLocation(); // ניסיון משיכת מיקום אוטומטי בהפעלה
+        });
+    </script>
+</body>
+</html>
